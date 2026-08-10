@@ -1,17 +1,3 @@
-/**
- * Partage des Frais – Lourdes
- * Google Apps Script — VERSION RÉELLEMENT DÉPLOYÉE (récupérée le 10/08/2026).
- *
- * ⚠️ Ce fichier est la SOURCE DE VÉRITÉ. Ne pas le remplacer par une
- * reconstruction. Toute modification doit être redéployée (voir docs/DEPLOIEMENT.md).
- *
- * Feuille utilisée : onglet "Data" uniquement.
- * Colonnes : A Type | B ID | C Nom | D Membres | E Montant | F Description | G Date | H Supprimé
- *
- * Actions supportées : add (défaut), delete, update.
- * Actions NON supportées (voir docs/ETAT-DES-LIEUX.md) : reset_year, clear_all.
- */
-
 function doPost(e) {
  try {
    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
