@@ -47,13 +47,30 @@ function doPost(e) {
    else if (data.action === 'delete') {
      const dataRange = sheet.getDataRange();
      const values = dataRange.getValues();
+     const now = new Date().toLocaleString('fr-FR');
+     let familyName = data.familyName || null;
      
      // Trouver la ligne avec l'ID correspondant
      for (let i = 1; i < values.length; i++) {
        if (String(values[i][1]) === String(data.id)) {
          // Marquer comme supprimé (colonne H = 8)
-         sheet.getRange(i + 1, 8).setValue(new Date().toLocaleString('fr-FR'));
+         sheet.getRange(i + 1, 8).setValue(now);
+         // Si c'est une FAM et qu'on n'a pas reçu le nom, le lire depuis la ligne
+         if (values[i][0] === 'FAM' && !familyName) {
+           familyName = values[i][2];
+         }
          break;
+       }
+     }
+     
+     // Cascade : marquer toutes les DEP de cette famille comme supprimées
+     if (familyName) {
+       for (let i = 1; i < values.length; i++) {
+         if (values[i][0] === 'DEP'
+             && String(values[i][2]) === familyName
+             && (!values[i][7] || values[i][7] === '')) {
+           sheet.getRange(i + 1, 8).setValue(now);
+         }
        }
      }
    }

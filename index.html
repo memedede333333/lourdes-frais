@@ -1083,19 +1083,31 @@
             const family = window.appState.families.find(f => f.id === familyId);
             if (!family) return;
             
-            if (!confirm(`Supprimer la famille "${family.name}" ?`)) return;
+            // Compter les dépenses associées pour la confirmation
+            const familyExpenses = window.appState.expenses.filter(
+                e => e.familyId === familyId && e.year === window.appState.currentYear
+            );
+            const totalAmount = familyExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+            let confirmMsg;
+            if (familyExpenses.length > 0) {
+                confirmMsg = `La famille "${family.name}" a ${familyExpenses.length} dépense(s) (total ${totalAmount.toFixed(2)} €).\n\nSupprimer la famille ET ses dépenses ?`;
+            } else {
+                confirmMsg = `Supprimer la famille "${family.name}" ?`;
+            }
+            if (!confirm(confirmMsg)) return;
             
             showLoading('Suppression en cours...');
             
             try {
-                // Supprimer localement
+                // Supprimer localement (famille + ses dépenses)
                 window.appState.families = window.appState.families.filter(f => f.id !== familyId);
                 window.appState.expenses = window.appState.expenses.filter(e => e.familyId !== familyId);
                 saveToCache();
                 updateUI();
                 
-                // Envoyer la suppression à Google Sheets
-                await saveToSheets('delete_family', { id: familyId });
+                // Envoyer la suppression à Google Sheets (avec le nom pour la cascade)
+                await saveToSheets('delete_family', { id: familyId, familyName: family.name });
                 
                 hideLoading();
                 showMessage('Famille supprimée', 'success');
@@ -1602,6 +1614,10 @@
                         action: 'delete',
                         id: data.id
                     };
+                    // Pour delete_family, transmettre le nom pour la cascade côté backend
+                    if (action === 'delete_family' && data.familyName) {
+                        payload.familyName = data.familyName;
+                    }
                 } else if (action === 'update_family') {
                     payload = {
                         action: 'update',
