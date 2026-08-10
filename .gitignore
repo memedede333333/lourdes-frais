@@ -1,0 +1,18 @@
+# Configuration clasp locale (contient le Script ID, propre à chaque machine)
+.clasp.json
+.clasprc.json
+
+# Dépendances
+node_modules/
+
+# Système
+.DS_Store
+Thumbs.db
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+
+# Exports locaux de l'application
+lourdes-*-export.json

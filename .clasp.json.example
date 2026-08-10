@@ -1,0 +1,17 @@
+{
+  "scriptId": "COLLER_ICI_LE_SCRIPT_ID",
+  "rootDir": "./apps-script"
+}
+
+// ─────────────────────────────────────────────────────────────
+// NB : ce fichier .example est indicatif (le vrai .clasp.json ne
+// doit PAS contenir de commentaires — c'est du JSON strict).
+//
+// scriptId  = "ID du script" (≈57 car., NE commence PAS par AKfycb)
+//             → Éditeur Apps Script > ⚙️ Paramètres, ou : clasp list
+//
+// ID de déploiement connu (pour republier sans changer l'URL /exec) :
+//   AKfycbwUrAaGSxspiC4OL_QFitb9-74eM1W9ywAzZMYNfP0sMAUDb2GHd6-2agmcobaybPABKg
+//   → à utiliser avec : clasp deploy -i <cet_ID>
+//   → ou : export CLASP_DEPLOYMENT_ID=<cet_ID> avant ./scripts/deploy.sh
+// ─────────────────────────────────────────────────────────────
