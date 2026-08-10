@@ -17,28 +17,20 @@ function doPost(e) {
    // Action normale : ajouter une ligne
    if (!data.action || data.action === 'add') {
      if (data.type === 'FAM') {
-       // Ajouter une famille
        sheet.appendRow([
-         'FAM',
-         data.id,
-         data.name,
-         data.members,
-         '', // Pas de montant pour une famille
-         '',
-         new Date().toLocaleDateString('fr-FR'),
-         '' // Pas supprimé
+         'FAM', data.id, data.name, data.members, '', '',
+         new Date().toLocaleDateString('fr-FR'), ''
        ]);
      } else if (data.type === 'DEP') {
-       // Ajouter une dépense
        sheet.appendRow([
-         'DEP',
-         data.id,
-         data.familyName,
-         '', // Pas de membres pour une dépense
-         data.amount,
-         data.description,
-         data.date || new Date().toLocaleDateString('fr-FR'),
-         '' // Pas supprimé
+         'DEP', data.id, data.familyName, '', data.amount, data.description,
+         data.date || new Date().toLocaleDateString('fr-FR'), ''
+       ]);
+     } else if (data.type === 'REG') {
+       // Règlement : virement marqué comme réglé
+       sheet.appendRow([
+         'REG', data.id, data.name, '', '', '',
+         new Date().toLocaleDateString('fr-FR'), ''
        ]);
      }
    }
@@ -50,12 +42,9 @@ function doPost(e) {
      const now = new Date().toLocaleString('fr-FR');
      let familyName = data.familyName || null;
      
-     // Trouver la ligne avec l'ID correspondant
      for (let i = 1; i < values.length; i++) {
        if (String(values[i][1]) === String(data.id)) {
-         // Marquer comme supprimé (colonne H = 8)
          sheet.getRange(i + 1, 8).setValue(now);
-         // Si c'est une FAM et qu'on n'a pas reçu le nom, le lire depuis la ligne
          if (values[i][0] === 'FAM' && !familyName) {
            familyName = values[i][2];
          }
@@ -80,17 +69,29 @@ function doPost(e) {
      const dataRange = sheet.getDataRange();
      const values = dataRange.getValues();
      
-     // Trouver et modifier la ligne
      for (let i = 1; i < values.length; i++) {
        if (String(values[i][1]) === String(data.id)) {
          if (data.type === 'FAM' && data.members !== undefined) {
-           // Modifier le nombre de membres (colonne D = 4)
            sheet.getRange(i + 1, 4).setValue(data.members);
          } else if (data.type === 'DEP' && data.amount !== undefined) {
-           // Modifier le montant (colonne E = 5)
            sheet.getRange(i + 1, 5).setValue(data.amount);
          }
          break;
+       }
+     }
+   }
+   
+   // Action unsettle : annuler un règlement (marquer les REG correspondants comme supprimés)
+   else if (data.action === 'unsettle') {
+     const dataRange = sheet.getDataRange();
+     const values = dataRange.getValues();
+     const now = new Date().toLocaleString('fr-FR');
+     
+     for (let i = 1; i < values.length; i++) {
+       if (values[i][0] === 'REG'
+           && String(values[i][2]) === String(data.key)
+           && (!values[i][7] || values[i][7] === '')) {
+         sheet.getRange(i + 1, 8).setValue(now);
        }
      }
    }
@@ -113,15 +114,14 @@ function cleanupDeleted() {
  
  const data = sheet.getDataRange().getValues();
  
- // Parcourir de bas en haut pour éviter les problèmes d'index
  for (let i = data.length - 1; i >= 1; i--) {
-   if (data[i][7] && data[i][7] !== '') { // Si marqué comme supprimé
+   if (data[i][7] && data[i][7] !== '') {
      sheet.deleteRow(i + 1);
    }
  }
 }
 
-// Fonction de test pour vérifier que ça marche
+// Fonction de test
 function test() {
  const testData = {
    postData: {

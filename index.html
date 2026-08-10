@@ -25,20 +25,29 @@
   @supports(height:100dvh){.app{height:100dvh;}}
 
   /* ---- en-tête ---- */
-  .header{position:relative;flex-shrink:0;height:208px;overflow:hidden;background:#24304f;}
-  .header img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%;}
-  .header .veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,28,50,.35) 0%,rgba(20,28,50,.35) 45%,rgba(30,42,72,.9) 100%);}
-  .header .inner{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;padding:22px 24px 18px;color:#fff;}
-  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.24em;color:#e3c586;text-transform:uppercase;}
-  .header h1{font-weight:600;font-size:32px;line-height:1.05;margin-top:2px;text-shadow:0 2px 12px rgba(0,0,0,.4);}
-  .sync-row{display:flex;align-items:center;gap:10px;margin-top:14px;}
+  .header{position:relative;flex-shrink:0;height:208px;overflow:hidden;background:#24304f;transition:height .35s ease;}
+  .header img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%;transition:opacity .35s ease;}
+  .header .veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,28,50,.35) 0%,rgba(20,28,50,.35) 45%,rgba(30,42,72,.9) 100%);transition:background .35s ease;}
+  .header .inner{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;padding:22px 24px 18px;color:#fff;transition:padding .35s ease;}
+  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.24em;color:#e3c586;text-transform:uppercase;transition:opacity .25s ease,height .25s ease;overflow:hidden;}
+  .header h1{font-weight:600;font-size:32px;line-height:1.05;margin-top:2px;text-shadow:0 2px 12px rgba(0,0,0,.4);transition:font-size .35s ease;}
+  .sync-row{display:flex;align-items:center;gap:10px;margin-top:14px;transition:opacity .25s ease,height .25s ease,margin .25s ease;overflow:hidden;}
   .sync-status{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.16);backdrop-filter:blur(8px);padding:6px 12px;border-radius:20px;font-size:12.5px;}
   .sync-dot{width:8px;height:8px;border-radius:50%;background:#79c79a;animation:pulse 2s infinite;}
   .sync-dot.syncing{background:#e3c586;}
   .sync-dot.error{background:#e0776b;}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
   .sync-btn{display:flex;align-items:center;gap:6px;background:#fff;color:var(--blue);border:none;padding:7px 14px;border-radius:20px;font-size:12.5px;font-weight:600;cursor:pointer;}
-  .gear{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,.85);color:#5a6178;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;}
+  .gear{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,.85);color:#5a6178;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:top .35s ease;}
+  /* collapsed state */
+  .header.collapsed{height:64px;}
+  .header.collapsed img{opacity:.5;}
+  .header.collapsed .veil{background:rgba(20,28,50,.75);}
+  .header.collapsed .inner{padding:10px 24px 10px;}
+  .header.collapsed .eyebrow{opacity:0;height:0;}
+  .header.collapsed h1{font-size:20px;}
+  .header.collapsed .sync-row{opacity:0;height:0;margin:0;}
+  .header.collapsed .gear{top:15px;}
 
   /* ---- contenu ---- */
   .content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
@@ -250,6 +259,12 @@
     ['familyName','familyMembers'].forEach(id => document.getElementById(id).addEventListener('keypress', e => { if(e.key==='Enter') addFamily(); }));
     loadFromCache(); loadSettled(); updateUI();
     await syncFromSheet();
+    // collapse header on scroll
+    const content = document.querySelector('.content');
+    const header = document.querySelector('.header');
+    content.addEventListener('scroll', () => {
+      header.classList.toggle('collapsed', content.scrollTop > 30);
+    });
   }
 
   // ======== CACHE LOCAL ========
@@ -261,6 +276,11 @@
   }
   function loadSettled(){
     try{ const s = localStorage.getItem('lourdes_settled'); if(s) appState.settled = JSON.parse(s)||{}; }catch(e){}
+  }
+  function mergeSettled(sheetSettled){
+    // Sheet is source of truth, merge with local
+    appState.settled = {...appState.settled, ...sheetSettled};
+    saveSettled();
   }
   function saveSettled(){
     try{ localStorage.setItem('lourdes_settled', JSON.stringify(appState.settled)); }catch(e){}
@@ -297,7 +317,19 @@
         if(e.id&&e.amount>0) expenses.push({...e,year:appState.currentYear});
       }
     }
+    // Lire les lignes REG (réglements partagés)
+    const sheetSettled = {};
+    for(let i=1;i<lines.length;i++){
+      const line2 = lines[i].trim(); if(!line2) continue;
+      const v2 = parseCSVLine(line2);
+      const type2 = clean(v2[0]), supprime2 = clean(v2[7]);
+      if(type2==='REG' && (!supprime2 || supprime2==='')){
+        const key = clean(v2[2]); // clé stockée dans col C (Nom)
+        if(key) sheetSettled[key] = true;
+      }
+    }
     appState.families = families; appState.expenses = expenses;
+    mergeSettled(sheetSettled);
   }
   function parseCSVLine(line){
     const values=[]; let cur='',inQ=false;
@@ -405,10 +437,18 @@
         rem-=amount; db.balance+=amount; } }
     return transfers;
   }
-  function toggleSettled(key){
-    if(appState.settled[key]) delete appState.settled[key]; else appState.settled[key]=true;
+  async function toggleSettled(key){
+    const wasSettled = !!appState.settled[key];
+    if(wasSettled) delete appState.settled[key]; else appState.settled[key]=true;
     saveSettled(); updateBalance();
     showMessage(appState.settled[key]?'Virement marqué comme réglé':'Virement remis à régler','success');
+    // Sauvegarder dans le Sheet pour partage avec tous
+    if(wasSettled){
+      await saveToSheets('unsettle',{key});
+    } else {
+      await saveToSheets('settle',{key});
+    }
+    setTimeout(syncFromSheet,1000);
   }
 
   // ======== RENDU ========
@@ -557,6 +597,8 @@
       else if(action==='expense'){ const f=appState.families.find(x=>x.id===data.familyId); payload={type:'DEP',id:data.id,familyName:f?f.name:'Inconnue',amount:data.amount,description:data.description,date:data.date,action:'add'}; }
       else if(action==='delete_family'||action==='delete_expense'){ payload={action:'delete',id:data.id}; if(action==='delete_family'&&data.familyName) payload.familyName=data.familyName; }
       else if(action==='update_family') payload={action:'update',type:'FAM',id:data.id,members:data.members};
+      else if(action==='settle') payload={action:'add',type:'REG',id:Date.now().toString(),name:data.key};
+      else if(action==='unsettle') payload={action:'unsettle',key:data.key};
       else if(action==='clear_all') payload={action:'clear_all'};
       else if(action==='reset_year') payload={action:'reset_year',year:data.year};
       await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
