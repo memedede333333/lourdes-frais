@@ -258,12 +258,18 @@
     ['familyName','familyMembers'].forEach(id => document.getElementById(id).addEventListener('keypress', e => { if(e.key==='Enter') addFamily(); }));
     loadFromCache(); loadSettled(); updateUI();
     await syncFromSheet();
-    // Réduire le header au scroll (photo reste visible)
+    // Réduire le header au scroll (photo reste visible, compatible iOS Safari)
     const content = document.querySelector('.content');
     const header = document.querySelector('.header');
-    content.addEventListener('scroll', () => {
-      header.classList.toggle('collapsed', content.scrollTop > 30);
-    });
+    const handleScroll = () => {
+      const st = content ? content.scrollTop : (window.scrollY || 0);
+      header.classList.toggle('collapsed', st > 20);
+    };
+    if(content){
+      content.addEventListener('scroll', handleScroll, {passive: true});
+      content.addEventListener('touchmove', handleScroll, {passive: true});
+    }
+    window.addEventListener('scroll', handleScroll, {passive: true});
   }
 
   // ======== CACHE LOCAL ========
@@ -276,11 +282,6 @@
   function loadSettled(){
     try{ const s = localStorage.getItem('lourdes_settled'); if(s) appState.settled = JSON.parse(s)||{}; }catch(e){}
   }
-  function mergeSettled(sheetSettled){
-    // Sheet is source of truth, merge with local
-    appState.settled = {...appState.settled, ...sheetSettled};
-    saveSettled();
-  }
   function saveSettled(){
     try{ localStorage.setItem('lourdes_settled', JSON.stringify(appState.settled)); }catch(e){}
   }
@@ -290,11 +291,12 @@
     if(appState.isSyncing) return;
     appState.isSyncing = true; updateSyncStatus('syncing');
     try{
-      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Data`;
-      const res = await fetch(url);
+      // Ajout de &t=Date.now() pour contourner le cache CDN de Google gviz (essentiel pour iOS & sync temps réel)
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Data&t=${Date.now()}`;
+      const res = await fetch(url, {cache: 'no-store'});
       if(!res.ok) throw new Error('lecture impossible');
       parseDataSheet(await res.text());
-      saveToCache(); updateUI();
+      saveToCache(); saveSettled(); updateUI();
       const t = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
       updateSyncStatus('synced'); document.getElementById('syncText').textContent = 'Sync ' + t;
     }catch(e){
@@ -316,19 +318,28 @@
         if(e.id&&e.amount>0) expenses.push({...e,year:appState.currentYear});
       }
     }
-    // Lire les lignes REG (réglements partagés)
+    // Lire les lignes REG (réglements partagés) — Le Sheet est la source de vérité
     const sheetSettled = {};
+    let hasRegInSheet = false;
     for(let i=1;i<lines.length;i++){
       const line2 = lines[i].trim(); if(!line2) continue;
       const v2 = parseCSVLine(line2);
       const type2 = clean(v2[0]), supprime2 = clean(v2[7]);
-      if(type2==='REG' && (!supprime2 || supprime2==='')){
-        const key = clean(v2[2]); // clé stockée dans col C (Nom)
-        if(key) sheetSettled[key] = true;
+      if(type2==='REG'){
+        hasRegInSheet = true;
+        if(!supprime2 || supprime2===''){
+          const key = clean(v2[2]); // clé stockée dans col C (Nom)
+          if(key) sheetSettled[key] = true;
+        }
       }
     }
     appState.families = families; appState.expenses = expenses;
-    mergeSettled(sheetSettled);
+    // Si le sheet contient des données REG, il remplace le statut local pour assurer une vraie sync multi-appareils
+    if(hasRegInSheet){
+      appState.settled = sheetSettled;
+    } else {
+      appState.settled = {...appState.settled, ...sheetSettled};
+    }
   }
   function parseCSVLine(line){
     const values=[]; let cur='',inQ=false;
@@ -344,6 +355,10 @@
     document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
     document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
     document.getElementById(tab).classList.add('active');
+    const content = document.querySelector('.content');
+    const header = document.querySelector('.header');
+    if(content){ content.scrollTop = 0; }
+    if(header){ header.classList.remove('collapsed'); }
   }
 
   // ======== FAMILLES ========
