@@ -25,28 +25,20 @@
   @supports(height:100dvh){.app{height:100dvh;}}
 
   /* ---- en-tête ---- */
-  .header{position:relative;flex-shrink:0;height:180px;overflow:hidden;background:#24304f;transition:height .35s ease;}
+  .header{position:relative;flex-shrink:0;height:180px;overflow:hidden;background:#24304f;}
   .header img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%;}
-  .header .veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,28,50,.2) 0%,rgba(20,28,50,.2) 40%,rgba(30,42,72,.85) 100%);transition:background .35s ease;}
-  .header .inner{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;padding:14px 24px 12px;color:#fff;transition:padding .3s ease;}
-  .eyebrow{font-size:10px;font-weight:600;letter-spacing:.24em;color:#e3c586;text-transform:uppercase;transition:opacity .25s,max-height .25s;max-height:20px;overflow:hidden;}
-  .header h1{font-weight:600;font-size:26px;line-height:1.1;margin-top:2px;text-shadow:0 2px 12px rgba(0,0,0,.4);transition:font-size .3s ease;}
-  .sync-row{display:flex;align-items:center;gap:8px;margin-top:8px;transition:opacity .25s,max-height .25s;max-height:40px;overflow:hidden;}
+  .header .veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,28,50,.2) 0%,rgba(20,28,50,.2) 40%,rgba(30,42,72,.85) 100%);}
+  .header .inner{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;padding:14px 24px 12px;color:#fff;}
+  .eyebrow{font-size:10px;font-weight:600;letter-spacing:.24em;color:#e3c586;text-transform:uppercase;}
+  .header h1{font-weight:600;font-size:26px;line-height:1.1;margin-top:2px;text-shadow:0 2px 12px rgba(0,0,0,.4);}
+  .sync-row{display:flex;align-items:center;gap:8px;margin-top:8px;}
   .sync-status{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.16);backdrop-filter:blur(8px);padding:5px 10px;border-radius:20px;font-size:11.5px;}
   .sync-dot{width:7px;height:7px;border-radius:50%;background:#79c79a;animation:pulse 2s infinite;}
   .sync-dot.syncing{background:#e3c586;}
   .sync-dot.error{background:#e0776b;}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
   .sync-btn{display:flex;align-items:center;gap:5px;background:#fff;color:var(--blue);border:none;padding:5px 12px;border-radius:20px;font-size:11.5px;font-weight:600;cursor:pointer;}
-  .gear{position:absolute;top:10px;right:12px;width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,.85);color:#5a6178;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:top .3s ease;}
-  /* réduit au scroll — photo toujours visible */
-  .header.collapsed{height:64px;}
-  .header.collapsed .veil{background:rgba(20,28,50,.55);}
-  .header.collapsed .inner{padding:8px 24px 8px;}
-  .header.collapsed .eyebrow{opacity:0;max-height:0;}
-  .header.collapsed h1{font-size:18px;}
-  .header.collapsed .sync-row{opacity:0;max-height:0;}
-  .header.collapsed .gear{top:17px;}
+  .gear{position:absolute;top:10px;right:12px;width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,.85);color:#5a6178;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
 
   /* ---- contenu ---- */
   .content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
@@ -258,18 +250,6 @@
     ['familyName','familyMembers'].forEach(id => document.getElementById(id).addEventListener('keypress', e => { if(e.key==='Enter') addFamily(); }));
     loadFromCache(); loadSettled(); updateUI();
     await syncFromSheet();
-    // Réduire le header au scroll (photo reste visible, compatible iOS Safari)
-    const content = document.querySelector('.content');
-    const header = document.querySelector('.header');
-    const handleScroll = () => {
-      const st = content ? content.scrollTop : (window.scrollY || 0);
-      header.classList.toggle('collapsed', st > 20);
-    };
-    if(content){
-      content.addEventListener('scroll', handleScroll, {passive: true});
-      content.addEventListener('touchmove', handleScroll, {passive: true});
-    }
-    window.addEventListener('scroll', handleScroll, {passive: true});
   }
 
   // ======== CACHE LOCAL ========
@@ -355,10 +335,6 @@
     document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
     document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
     document.getElementById(tab).classList.add('active');
-    const content = document.querySelector('.content');
-    const header = document.querySelector('.header');
-    if(content){ content.scrollTop = 0; }
-    if(header){ header.classList.remove('collapsed'); }
   }
 
   // ======== FAMILLES ========
@@ -615,7 +591,7 @@
       else if(action==='unsettle') payload={action:'unsettle',key:data.key};
       else if(action==='clear_all') payload={action:'clear_all'};
       else if(action==='reset_year') payload={action:'reset_year',year:data.year};
-      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
       return true;
     }catch(e){ console.error('saveToSheets',e); return false; }
   }
