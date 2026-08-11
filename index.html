@@ -25,7 +25,7 @@
   @supports(height:100dvh){.app{height:100dvh;}}
 
   /* ---- en-tête ---- */
-  .header{position:relative;flex-shrink:0;height:180px;overflow:hidden;background:#24304f;}
+  .header{position:relative;height:180px;overflow:hidden;background:#24304f;}
   .header img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%;}
   .header .veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,28,50,.2) 0%,rgba(20,28,50,.2) 40%,rgba(30,42,72,.85) 100%);}
   .header .inner{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;padding:14px 24px 12px;color:#fff;}
@@ -147,21 +147,20 @@
 <body>
 <div class="app">
 
-  <div class="header">
-    <img src="grotte-lourdes.jpg" alt="Grotte de Lourdes">
-    <div class="veil"></div>
-    <div class="inner">
-      <div class="eyebrow">Pèlerinage · Lourdes 2026</div>
-      <h1 class="serif">Partage des frais</h1>
-      <div class="sync-row">
-        <div class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncText">Synchronisé</span></div>
-        <button class="sync-btn" onclick="forceSync()">↻ Synchroniser</button>
-      </div>
-    </div>
-    <button class="gear" onclick="toggleAdmin()" title="Administration">⚙</button>
-  </div>
-
   <div class="content">
+    <div class="header">
+      <img src="grotte-lourdes.jpg" alt="Grotte de Lourdes">
+      <div class="veil"></div>
+      <div class="inner">
+        <div class="eyebrow">Pèlerinage · Lourdes 2026</div>
+        <h1 class="serif">Partage des frais</h1>
+        <div class="sync-row">
+          <div class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncText">Synchronisé</span></div>
+          <button class="sync-btn" onclick="forceSync()">↻ Synchroniser</button>
+        </div>
+      </div>
+      <button class="gear" onclick="toggleAdmin()" title="Administration">⚙</button>
+    </div>
     <!-- FAMILLES -->
     <div id="families" class="section active">
       <h2 class="title serif">Gestion des familles</h2>
